@@ -1,0 +1,30 @@
+一 基础
+1.mysql 架构 server(建立连接 分析 执行sql)    存储引擎(数据存储和提取)
+
+二 索引
+
+三 事务
+
+
+四 锁
+全局锁 全库逻辑备份
+flush tables with read lock
+unlock tables
+
+表级锁
+表锁 元数据锁(DML) 意向锁
+
+
+行锁
+Record Lock, Gap Lock, Next-Key Lock
+
+
+五 日志
+undo log 回滚日志 是InnoDB引擎生成的日志 实现事务中的原子性 主要用于事务回滚和MVCC
+redo log 重做日志 是InnoDB存储引擎生成的日志 实现事务中的持久性 主要用于掉电等故障恢复
+binlog 归档日志 是Server层生成的日志 主要用于数据备份和主从复制
+
+六 内存
+
+
+

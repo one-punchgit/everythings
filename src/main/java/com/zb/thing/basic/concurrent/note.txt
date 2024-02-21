@@ -1,0 +1,172 @@
+一. JMM以及并发三大特性
+可见性
+volatile 内存屏障 synchronized lock final
+volatile 读时 会把工作内存中值为无效 重新read
+         写时 会把工作内存中值写入主存
+         可见性原理 read load use / assign store write 必须是连续的 都要重新读或者立即写入
+         字节码层面 lock addl(lock 前缀指令)
+
+总结 1.内存屏障  2.上下文切换 这两个方法可以保证可见性
+有序性
+原子性
+
+
+JMM
+
+use             assign
+load            store
+
+read            write
+lock 作用于主内存 把一个变量标识为一个线程独占 unlock
+
+缓存一致性协议
+M E S I
+
+
+
+
+
+三. hashmap
+头插法循环引用问题
+线程1扩容后还没有进行数据迁移时 A->B
+线程2扩容后进行完迁移 B->A
+后面线程1进行数据迁移时 A->B->A
+
+ConcurrentHashMap
+前期初始化数组以及hash不冲突新建node节点时采用cas 后期synchronized(node) 锁链表head或者tree头
+
+
+四. 线程池
+addWorker
+
+
+五. 线程
+进程之间通信方式 管道 信号 信号量 共享内存 socket 消息队列
+jvm中的六中状态 new runnable timed_waiting waiting(sleep join wait park) blocked(竞争synchronized没有拿到锁) terminated
+线程的同步和互斥 同步值得是线程1依靠线程2的结果  互斥指的是对于同一个共享变量存在竞争关系
+上下文切换 cpu从一个进程或者线程到另一个进程或者线程的切换 主要有三种方式 线程/进程切换 系统调用 中断
+操作系统层面的线程状态 初始 就绪 运行 休眠 终止
+
+Thread常用方法
+sleep running->timed_waiting状态 调用interrupt方法会触发异常并会清除中断标志
+yield running->runnable状态 释放cpu资源
+join  调用方法的线程等待
+
+java的中断机制
+interrupt() 设置中断位为true 不会停止线程
+isInterrupted() 判断当前线程中断标志位是否为true 不会清除标志位
+Thread.interrupted() 判断标志位是否是true 并清除中断标志位 重置为false
+
+线程之间通信
+volatile
+wait notify
+park unpark
+管道
+
+
+六. 并发编程之CAS 指令不存在用户态到内核态的切换
+Compare And Swap比较并交换
+Unsafe unsafe = UnsafeFactory.getUnsafe()
+unsafe.compareAndSwapInt(entity, offset, 0, 3);
+
+Atomic工具类
+AtomicInteger
+AtomicStampedReference
+AtomicMarkableReference
+
+七. Synchronized
+jvm内置锁 基于Monitor机制(管程 管理共享变量以及对共享变量的操作的过程 让它们支持并发) 依赖操作系统底层互斥原语Mutex
+方法中是使用访问标志 Access flags
+同步代码块是使用moinitorenter monitorexit
+这两种方式都是jvm通过调用操作系统互斥原语来实现  被阻塞的线程会被挂起 等待重新调度 造成用户态核心态
+
+管程模型
+MESA模型
+            入口等待队列
+共享变量
+            多件变量等待队列
+
+
+java中Monitor的实现
+hotspot源码中的
+ObjectMonitor{
+_header 对象头
+_owner 当前获取锁的线程
+_WaitSet 等待线程组成的双向链表 wait方法调用后存放
+_cxq  多线程竞争会先存放入这个
+_EntryList  竞争锁失败或者被唤醒的线程
+}
+
+001 无锁
+101 偏向锁 延迟 因为jvm启动中会使用大量sync 为了节省时间 不使用偏向锁 四秒后进入匿名偏向状态
+00 轻量级锁 指向栈中锁记录的指针
+10 重量级锁
+11 无
+
+锁升级
+偏向锁-轻量级锁-重量级锁
+锁降级
+轻量级锁-无锁
+重量级锁-无锁
+
+八. synchronized
+偏向锁四秒延迟
+
+九. AQS之独占锁ReentrantLock
+AbstractQueuedSynchronizer 抽象队列同步器
+同步等待队列 维护获取锁失败时入队的线程 双向链表
+条件等待队列 调用await() 链表
+
+ReentrantLock基于AQS框架应用实现
+可中断
+可设置超时时间
+可设置公平
+支持多个条件变量
+支持可重入
+
+加锁
+thread-0 int state CAS 0-> 1 加锁成功
+thread-1 state CAS加锁失败 构建node节点 进入同步等待队列 并LockSupport.park
+thread-2 state CAS加锁失败 构建node节点 进入同步等待队列 并LockSupport.park
+解锁
+thread-0 int set state 1-> 0 解锁成功
+LockSupport.unpark 同步等待队列节点
+
+
+
+十. AQS之Semaphore CountDownLatch CyclicBarrier
+Semaphore 信号量 限流器
+
+CountDownLatch
+多个线程等待 多个线程wait 主线程--  多线程同时跑
+单个线程等待
+
+
+CyclicBarrier 循环屏障
+
+
+十一 十二
+ReentrantReadWriteLock 读读共享 读写 写读 写写互斥
+
+十三十四
+BlockingQueue
+
+十五. ForkJoin
+线程数计算方法
+线程数=cpu核心数*(1+ 平均等待时间/平均工作时间)
+ThreadPoolExecutor有两个明显的缺点：一是无法对大任务进行拆分，对于某个任务只能由单线程执行；二是工作线程从队列中获取任务时存在竞争情况
+分治算法
+
+
+十六. Future CompletableFuture Disruptor
+Future 两个构造方法 Callable  Runnable
+Future局限性在于 如果执行多个任务 查询订单1价格 查询订单2价格 查询订单3价格 f1.get() f2.get() f3.get() 主线程会一直阻塞任务 直到任务依次完成 这样会造成如果有长任务则会一直阻塞 而且不能获取哪个任务先执行完就获取结果 CompletionService可以解决这个问题
+CompletableFuture
+Disruptor 高性能内存队列 无锁设计 并且避免伪共享
+
+十七. 常用并发设计模式
+
+
+
+
+
